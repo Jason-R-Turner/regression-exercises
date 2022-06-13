@@ -3,8 +3,6 @@
 
 # 2. Using your acquired Zillow data, walk through the summarization and cleaning steps in your wrangle.ipynb file like we did above. You may handle the missing values however you feel is appropriate and meaninful; remember to document your process and decisions using markdown and code commenting where helpful.
 
-# In[1]:
-
 
 # import modules for acquire and prep stages
 import pandas as pd
@@ -15,7 +13,6 @@ from sklearn.model_selection import train_test_split
 
 # The below function will be what we use to access the database holding our Zillow data
 
-# In[2]:
 
 
 def get_connection(db, user=env.user, host=env.host, password=env.password):
@@ -27,8 +24,6 @@ def get_connection(db, user=env.user, host=env.host, password=env.password):
 # Returns with correct address/password combinat to access the database
     return f'mysql+pymysql://{user}:{password}@{host}/{db}'
 
-
-# In[3]:
 
 
 def new_zillow_data():
@@ -49,8 +44,6 @@ def new_zillow_data():
 # Returns the called dataframe
     return df
 
-
-# In[4]:
 
 
 def get_zillow_data():
@@ -80,8 +73,6 @@ def get_zillow_data():
 
 # Since there are relatively few nulls compared to the number of rows of data we have they'll be dropped using the below function
 
-# In[5]:
-
 
 def handle_nulls(df):
     '''
@@ -96,8 +87,6 @@ def handle_nulls(df):
 
 
 # We'll clean up the data by converting it into data types that are easier to work with for our purposes
-
-# In[6]:
 
 
 def float_to_int(df):
@@ -128,7 +117,6 @@ def clean_zillow(df):
     return df
 
 
-# In[8]:
 
 
 def split_zillow(df):
@@ -156,7 +144,6 @@ def split_zillow(df):
 
 # 5. Based on the work you've done, choose a scaling method for your dataset. Write a function within your prepare.py (wrangle.py for me) that accepts as input the train, validate, and test data splits, and returns the scaled versions of each. Be sure to only learn the parameters for scaling from your training data!
 
-# In[1]:
 
 
 def scale_zillow(train, validate, test,
@@ -183,7 +170,6 @@ def scale_zillow(train, validate, test,
 
 # 3. Store all of the necessary functions to automate your process from acquiring the data to returning a cleaned dataframe witn no missing values in your wrangle.py file. Name your final function wrangle_zillow
 
-# In[9]:
 
 
 def wrangle_zillow():
@@ -197,3 +183,56 @@ def wrangle_zillow():
     
     return train, validate, test
 
+
+def split_tips(df):
+    '''
+    Takes our df and splits it into train, validate, and test dfs for exploration, fitting, validation, and testing
+    '''
+    
+# splits the full data set 60/40 into train and test dataframes stratified 
+# around taxvaluedollarcnt, the target variable, using the train_test_split function
+    train, test = train_test_split(df, 
+                               train_size = 0.75, 
+                               stratify = df.tip, 
+                               random_state=2468)
+
+# splits the train dataframe 60/40 into the new train and validate dataframes
+# they're stratified around taxvaluedollarcnt again using the train_test_split function
+    train, validate = train_test_split(train,
+                                    train_size = 0.75,
+                                    stratify = train.tip,
+                                    random_state=2468)
+    
+# returns the three dataframes we'll use for training, validation, and testing
+    return train, validate, test
+
+def scale_tips(train, validate, test,
+                 cols_to_scale = ['total_bill', 'tip', 'size', 'price_per_person']):
+    '''
+    Accepts train, validate, and test as inputs from split data then returns scaled versions for each one
+    '''
+    train_scaled = train.copy()
+    validate_scaled = validate.copy()
+    test_scaled = test.copy()
+    
+    scaler = MinMaxScaler()
+    
+    scaler.fit(train[cols_to_scale])
+    
+    train_scaled[cols_to_scale] = pd.DataFrame(scaler.transform(train[cols_to_scale]), columns=train[cols_to_scale].columns.values).set_index([train.index.values])
+                                                  
+    validate_scaled[cols_to_scale] = pd.DataFrame(scaler.transform(validate[cols_to_scale]), columns=validate[cols_to_scale].columns.values).set_index([validate.index.values])
+    
+    test_scaled[cols_to_scale] = pd.DataFrame(scaler.transform(test[cols_to_scale]), columns=test[cols_to_scale].columns.values).set_index([test.index.values])
+    
+    return train_scaled, validate_scaled, test_scaled
+
+def wrangle_tips(df):
+    '''
+    Splits tips data into train, validate, and test, then scales those into scaled versions
+    '''
+    df = split_tips(df)
+    df = scale_tips(df)
+    train, validate, test = scale_tips(df)
+    
+    return train_scaled, validate_scaled, test_scaled
